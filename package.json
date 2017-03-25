@@ -1,0 +1,20 @@
+{
+  "name": "minesweeper3d",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "shprodt",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "1.16.0",
+    "bower": "1.8.0",
+    "cookie-parser": "^1.4.3",
+    "express": "4.14.1",
+    "mongodb": "2.2.22",
+    "serve-favicon": "2.3.2",
+    "socket.io": "^1.7.2"
+  }
+}
