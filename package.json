@@ -17,5 +17,9 @@
     "mongodb": "2.2.22",
     "serve-favicon": "2.3.2",
     "socket.io": "^1.7.2"
-  }
+  },
+  "repository": {
+  "type": "git",
+  "url": "git://github.com/shprodt/minesweeper3d.git"
+}
 }
