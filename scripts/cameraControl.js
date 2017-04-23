@@ -1,26 +1,33 @@
-var update = function (fi, fi2, r, camera, target, lookAt) {
-    camera.position.x = Math.cos(fi) * Math.cos(fi2) * r + target.x;
-    camera.position.z = Math.sin(fi) * Math.cos(fi2) * r + target.z;
-    camera.position.y = Math.sin(fi2) * r + target.y;
-    if (lookAt) camera.lookAt(target);
+var orbitCamera = {};
+orbitCamera.update = function () {
+    orbitCamera.camera.position.x = Math.cos(orbitCamera.fi) * Math.cos(orbitCamera.fi2) * orbitCamera.r + orbitCamera.target.x;
+    orbitCamera.camera.position.z = Math.sin(orbitCamera.fi) * Math.cos(orbitCamera.fi2) * orbitCamera.r + orbitCamera.target.z;
+    orbitCamera.camera.position.y = Math.sin(orbitCamera.fi2) * orbitCamera.r + orbitCamera.target.y;
+    if (orbitCamera.lookAt) orbitCamera.camera.lookAt(orbitCamera.target);
 };
-if(module) module.exports = function (element, camera, target, lookAt) {
+orbitCamera.reset = function (camera, target) {
+    let Rxz = Math.pow((Math.pow(camera.position.z - target.z, 2) + Math.pow(camera.position.x - target.x, 2)), 1 / 2);
+    orbitCamera.r = Math.pow((Math.pow(camera.position.z - target.z, 2) + Math.pow(camera.position.x - target.x, 2) + Math.pow(camera.position.y - target.y, 2)), 1 / 2);
+    orbitCamera.fi = (camera.position.x - target.x) > 0 ? Math.asin((camera.position.z - target.z) / Rxz) : Math.PI - Math.asin((camera.position.z - target.z) / Rxz);
+    orbitCamera.fi2 = (camera.position.y - target.y) < 0 ? -Math.acos(Rxz / orbitCamera.r) : Math.acos(Rxz / orbitCamera.r);
+    //orbitCamera.fi2 = Math.abs(orbitCamera.fi2) <= Math.PI / 2 - 0.2 ? orbitCamera.fi2 : Math.PI / Math.sign(orbitCamera.fi2) * (Math.PI/2 - 0.2);
+};
+orbitCamera.init = function (element, camera, target, lookAt) {
+    orbitCamera.lookAt = lookAt;
+    orbitCamera.target = target;
+    orbitCamera.camera = camera;
+    orbitCamera.reset(camera, target);
     element.oncontextmenu = function () {
         event.preventDefault();
     };
-    var elem = {};
-    elem.r = Math.pow((Math.pow(camera.position.z - target.z, 2) + Math.pow(camera.position.x - target.x, 2) + Math.pow(camera.position.y - target.y, 2)), 1 / 2);
-    elem.fi = Math.atan((camera.position.z - target.z) / (camera.position.x - target.x)) != Math.atan((camera.position.z - target.z) / (camera.position.x - target.x)) ? Math.PI / 2 : Math.atan((camera.position.z - target.z) / (camera.position.x - target.x));
-    elem.fi2 = Math.atan((camera.position.y - target.y) / (camera.position.x - target.x)) != Math.atan((camera.position.y - target.y) / (camera.position.x - target.x)) ? Math.PI / 2 : Math.atan((camera.position.y - target.y) / (camera.position.x - target.x));
-    elem.fi2 = Math.abs(elem.fi2) <= Math.PI / 2 - 0.001 ? elem.fi2 : Math.PI / Math.sign(elem.fi2) * (2 - 0.001);
-
     element.onmousedown = function (event) {
         event.preventDefault();
         if (event.which == 3) {
             element.onmousemove = function (event) {
-                elem.fi += (event.movementX) / 100;
-                elem.fi2 = Math.abs(elem.fi2 + (event.movementY) / 100) <= Math.PI / 2 - 0.001 ? elem.fi2 + (event.movementY) / 100 : elem.fi2;
-                update(elem.fi, elem.fi2, elem.r, camera, target, lookAt);
+                orbitCamera.fi += (event.movementX) / 100;
+                //orbitCamera.fi2 = orbitCamera.fi2 + (event.movementY) / 100;
+                orbitCamera.fi2 = Math.abs(orbitCamera.fi2 + (event.movementY) / 100) <= Math.PI / 2 - 0.2 ? orbitCamera.fi2 + (event.movementY) / 100 : orbitCamera.fi2;
+                orbitCamera.update();
             }
         }
     };
@@ -28,12 +35,11 @@ if(module) module.exports = function (element, camera, target, lookAt) {
         element.onmousemove = function () {
         }
     };
-
     element.onmousewheel = function (event) {
         event.preventDefault();
-        elem.r = elem.r + event.deltaY / 40 >= 5 ? elem.r + event.deltaY / 40 : 5;
-        update(elem.fi, elem.fi2, elem.r, camera, target, lookAt);
+        orbitCamera.r = orbitCamera.r + event.deltaY / 40 >= 5 ? orbitCamera.r + event.deltaY / 40 : 5;
+        orbitCamera.update();
     };
-    
 };
 
+if (module) module.exports = orbitCamera;

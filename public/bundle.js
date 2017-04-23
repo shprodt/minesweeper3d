@@ -345,29 +345,36 @@ if (module) module.exports = MultiFlags;
 /* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(module) {var update = function (fi, fi2, r, camera, target, lookAt) {
-    camera.position.x = Math.cos(fi) * Math.cos(fi2) * r + target.x;
-    camera.position.z = Math.sin(fi) * Math.cos(fi2) * r + target.z;
-    camera.position.y = Math.sin(fi2) * r + target.y;
-    if (lookAt) camera.lookAt(target);
+/* WEBPACK VAR INJECTION */(function(module) {var orbitCamera = {};
+orbitCamera.update = function () {
+    orbitCamera.camera.position.x = Math.cos(orbitCamera.fi) * Math.cos(orbitCamera.fi2) * orbitCamera.r + orbitCamera.target.x;
+    orbitCamera.camera.position.z = Math.sin(orbitCamera.fi) * Math.cos(orbitCamera.fi2) * orbitCamera.r + orbitCamera.target.z;
+    orbitCamera.camera.position.y = Math.sin(orbitCamera.fi2) * orbitCamera.r + orbitCamera.target.y;
+    if (orbitCamera.lookAt) orbitCamera.camera.lookAt(orbitCamera.target);
 };
-if(module) module.exports = function (element, camera, target, lookAt) {
+orbitCamera.reset = function (camera, target) {
+    let Rxz = Math.pow((Math.pow(camera.position.z - target.z, 2) + Math.pow(camera.position.x - target.x, 2)), 1 / 2);
+    orbitCamera.r = Math.pow((Math.pow(camera.position.z - target.z, 2) + Math.pow(camera.position.x - target.x, 2) + Math.pow(camera.position.y - target.y, 2)), 1 / 2);
+    orbitCamera.fi = (camera.position.x - target.x) > 0 ? Math.asin((camera.position.z - target.z) / Rxz) : Math.PI - Math.asin((camera.position.z - target.z) / Rxz);
+    orbitCamera.fi2 = (camera.position.y - target.y) < 0 ? -Math.acos(Rxz / orbitCamera.r) : Math.acos(Rxz / orbitCamera.r);
+    //orbitCamera.fi2 = Math.abs(orbitCamera.fi2) <= Math.PI / 2 - 0.2 ? orbitCamera.fi2 : Math.PI / Math.sign(orbitCamera.fi2) * (Math.PI/2 - 0.2);
+};
+orbitCamera.init = function (element, camera, target, lookAt) {
+    orbitCamera.lookAt = lookAt;
+    orbitCamera.target = target;
+    orbitCamera.camera = camera;
+    orbitCamera.reset(camera, target);
     element.oncontextmenu = function () {
         event.preventDefault();
     };
-    var elem = {};
-    elem.r = Math.pow((Math.pow(camera.position.z - target.z, 2) + Math.pow(camera.position.x - target.x, 2) + Math.pow(camera.position.y - target.y, 2)), 1 / 2);
-    elem.fi = Math.atan((camera.position.z - target.z) / (camera.position.x - target.x)) != Math.atan((camera.position.z - target.z) / (camera.position.x - target.x)) ? Math.PI / 2 : Math.atan((camera.position.z - target.z) / (camera.position.x - target.x));
-    elem.fi2 = Math.atan((camera.position.y - target.y) / (camera.position.x - target.x)) != Math.atan((camera.position.y - target.y) / (camera.position.x - target.x)) ? Math.PI / 2 : Math.atan((camera.position.y - target.y) / (camera.position.x - target.x));
-    elem.fi2 = Math.abs(elem.fi2) <= Math.PI / 2 - 0.001 ? elem.fi2 : Math.PI / Math.sign(elem.fi2) * (2 - 0.001);
-
     element.onmousedown = function (event) {
         event.preventDefault();
         if (event.which == 3) {
             element.onmousemove = function (event) {
-                elem.fi += (event.movementX) / 100;
-                elem.fi2 = Math.abs(elem.fi2 + (event.movementY) / 100) <= Math.PI / 2 - 0.001 ? elem.fi2 + (event.movementY) / 100 : elem.fi2;
-                update(elem.fi, elem.fi2, elem.r, camera, target, lookAt);
+                orbitCamera.fi += (event.movementX) / 100;
+                //orbitCamera.fi2 = orbitCamera.fi2 + (event.movementY) / 100;
+                orbitCamera.fi2 = Math.abs(orbitCamera.fi2 + (event.movementY) / 100) <= Math.PI / 2 - 0.2 ? orbitCamera.fi2 + (event.movementY) / 100 : orbitCamera.fi2;
+                orbitCamera.update();
             }
         }
     };
@@ -375,16 +382,14 @@ if(module) module.exports = function (element, camera, target, lookAt) {
         element.onmousemove = function () {
         }
     };
-
     element.onmousewheel = function (event) {
         event.preventDefault();
-        elem.r = elem.r + event.deltaY / 40 >= 5 ? elem.r + event.deltaY / 40 : 5;
-        update(elem.fi, elem.fi2, elem.r, camera, target, lookAt);
+        orbitCamera.r = orbitCamera.r + event.deltaY / 40 >= 5 ? orbitCamera.r + event.deltaY / 40 : 5;
+        orbitCamera.update();
     };
-    
 };
 
-
+if (module) module.exports = orbitCamera;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)(module)))
 
 /***/ }),
@@ -726,10 +731,13 @@ renderer.setSize(global.innerWidth, global.innerHeight);
 var scene = new THREE.Scene();
 scene.background = new THREE.Color(0xbbbbbb);
 var camera = new THREE.PerspectiveCamera(75, global.innerWidth / global.innerHeight, 0.1, 5000);
+var aim_moving = new THREE.Vector3();
+var aim = new THREE.Vector3();
 var target_camera = new THREE.PerspectiveCamera(75, global.innerWidth / global.innerHeight, 0.1, 5000);
 camera.position.set(100, 100, 100);
 target_camera.position.set(100, 100, 100);
-var cameraMotion = new Motion(camera.position, ['x', 'y', 'z'], {T2: 0, T1: 0.2});
+var cameraMotion = new Motion(camera.position, ['x', 'y', 'z'], {T2: 0.1, T1: 0.2});
+var cameraAimMotion = new Motion(aim_moving, ['x', 'y', 'z'], {T2: 0, T1: 0.1});
 var ambient = new THREE.AmbientLight(0x444444);
 scene.add(ambient);
 var directionalLight = new THREE.DirectionalLight(0xffffff);
@@ -758,6 +766,7 @@ var cubeMarker = new THREE.Group();
 var indicator = new Array(26);
 var mineObj = undefined;
 var mines = undefined;
+var cameraTarget = new THREE.Vector3();
 
 var mainScript = function () {
     var pickedGroup = new THREE.Group();
@@ -780,8 +789,9 @@ var mainScript = function () {
         mine: cubeMine
     };
     mines = new MineCore(mineParameters);
-    var cameraTarget = mines.center;
-    cameraControl(canvas, target_camera, cameraTarget);
+    cameraTarget=aim;
+    aim.copy(mines.center);
+    cameraControl.init(canvas, target_camera, aim);
     render();
 
 };
@@ -793,7 +803,8 @@ function render() {
         mines.pickCellOnPosition(findParentBefore(scene, intersects[0].object).position);
     }
     cameraMotion.stepFixed([target_camera.position.x, target_camera.position.y, target_camera.position.z]);
-    camera.lookAt(mines.center);
+    cameraAimMotion.stepFixed([aim.x, aim.y, aim.z]);
+    camera.lookAt(aim_moving);
     indicator[0].lookAt({x: camera.position.x, z: camera.position.z, y: 0});
     renderer.render(scene, camera);
     if (mines.question) {
@@ -801,13 +812,24 @@ function render() {
         mines.question.children[1].rotation.x = 0;
         mines.question.children[1].rotation.z = 0;
     }
-
+    cameraControl.update();
     requestAnimationFrame(render);
 }
 
 function onMouseMove(event) {
     mouse.x = ( event.clientX / global.innerWidth ) * 2 - 1;
     mouse.y = -( event.clientY / global.innerHeight ) * 2 + 1;
+}
+function onMouseMove1(event) {
+    console.log('awdawd');
+}
+function onMiddleClick(event) {
+    if (event.which == 3) {
+        if (intersects[0]) {
+            aim.copy(intersects[0].point);
+            cameraControl.reset(target_camera,aim);
+        }
+    }
 }
 function onMouseClick(event) {
     mouse.x = ( event.clientX / global.innerWidth ) * 2 - 1;
@@ -830,6 +852,7 @@ function onResize() {
 global.addEventListener('mousemove', onMouseMove, false);
 global.addEventListener('click', onMouseClick, false);
 global.addEventListener('resize', onResize, false);
+global.addEventListener('mousedown', onMiddleClick, false);
 
 
 var afterLoaders = new MultiFlags(4, mainScript, this);
